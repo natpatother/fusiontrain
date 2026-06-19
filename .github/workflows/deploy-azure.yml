@@ -1,0 +1,94 @@
+name: Deploy to Azure App Service
+
+# Build the React frontend into the FastAPI backend and zip-deploy the
+# package to the existing Linux Python App Service. Authentication uses the
+# App Service publish profile stored as a GitHub secret — see .github/CICD-SETUP.md.
+
+on:
+  push:
+    branches: [main]
+    # Skip deploys for doc-only changes.
+    paths-ignore:
+      - "**/*.md"
+      - ".azure/**"
+      - ".vscode/**"
+  workflow_dispatch: {}
+
+# Avoid overlapping deploys; let the latest push win.
+concurrency:
+  group: deploy-azure-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AZURE_WEBAPP_NAME: rag-demo-app-rd0617c74d82a8
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      # The backend serves the SPA from app/static at "/" (see app/main.py).
+      - name: Bundle frontend into backend/app/static
+        run: |
+          rm -rf backend/app/static
+          cp -r frontend/dist backend/app/static
+
+      # Validate the backend imports/syntax before shipping.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Compile-check backend
+        working-directory: backend
+        run: python -m compileall app
+
+      # Zip root must contain app/main.py (App Service startup expects it).
+      - name: Create deployment package
+        working-directory: backend
+        run: |
+          zip -r "$GITHUB_WORKSPACE/release.zip" \
+            app scripts requirements.txt startup.sh \
+            -x "*__pycache__*" "*.pyc"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-package
+          path: release.zip
+          retention-days: 7
+
+  deploy:
+    name: Deploy to App Service
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-package
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: release.zip
