@@ -14,3 +14,7 @@ backend/app/static/
 .claude/settings.local.json
 
 *.zip
+
+# Azure credentials — never commit publish profiles
+*.PublishSettings
+*.publishsettings

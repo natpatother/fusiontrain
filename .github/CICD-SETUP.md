@@ -12,8 +12,8 @@ You only need to do this **one-time setup** once.
 | Setting | Value |
 |---------|-------|
 | GitHub repo | `natpatother/fusiontrain` |
-| App Service | `rag-demo-app-rd0617c74d82a8` |
-| Resource group | `rag-demo-rg` |
+| App Service | `demo-ai-nattanan` |
+| Resource group | `<resource-group>` |
 
 > App settings (DATABASE_URL, AZURE_OPENAI_*, etc.) and the startup command are
 > already configured on the App Service — the pipeline only ships code, so secrets
@@ -25,16 +25,16 @@ You only need to do this **one-time setup** once.
 
 ```bash
 az webapp deployment list-publishing-profiles \
-  -g rag-demo-rg -n rag-demo-app-rd0617c74d82a8 \
+  -g <resource-group> -n demo-ai-nattanan \
   --xml > publish-profile.xml
 ```
 
 **Option B — Portal:** App Service → **Overview** → **Download publish profile**.
 
 > If the download is blocked, enable basic auth first:
-> `az resource update --resource-group rag-demo-rg --name scm \
+> `az resource update --resource-group <resource-group> --name scm \
 > --namespace Microsoft.Web --resource-type basicPublishingCredentialsPolicies \
-> --parent sites/rag-demo-app-rd0617c74d82a8 --set properties.allow=true`
+> --parent sites/demo-ai-nattanan --set properties.allow=true`
 
 ## 2. Add it as a GitHub secret
 
@@ -60,7 +60,7 @@ Then delete the local `publish-profile.xml` — it's a long-lived credential.
 Then verify:
 
 ```bash
-curl https://rag-demo-app-rd0617c74d82a8.azurewebsites.net/api/health
+curl https://demo-ai-nattanan.azurewebsites.net/api/health
 # {"status":"ok","database":true}
 ```
 

@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  AZURE_WEBAPP_NAME: rag-demo-app-rd0617c74d82a8
+  AZURE_WEBAPP_NAME: demo-ai-nattanan
   PYTHON_VERSION: "3.12"
   NODE_VERSION: "20"
 
